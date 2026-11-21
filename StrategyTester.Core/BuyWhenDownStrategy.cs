@@ -27,17 +27,23 @@
 			: base(
 				ticker,
 				"Buy in parts when the price is down from its peak and has stabilized",
-				$"For every {pctDownFromPeakToBuy}% down from the peak, after the price hasn't gone down for {daysOfNonGoingDownToBuy} days in a row, " +
-				$"invest {(decimal)pctDownFromPeakToBuy / pctDownToInvestAllCash:P} of the cash we had at the peak; invest all cash at {pctDownToInvestAllCash}% down. Never sells.",
+				ValidateAndDescribe(pctDownFromPeakToBuy, daysOfNonGoingDownToBuy, pctDownToInvestAllCash),
 				$"Down % to buy = {pctDownFromPeakToBuy}, Non-down days = {daysOfNonGoingDownToBuy}, Down % to invest all = {pctDownToInvestAllCash}")
+		{
+			PctDownFromPeakToBuy    = pctDownFromPeakToBuy;
+			DaysOfNonGoingDownToBuy = daysOfNonGoingDownToBuy;
+			PctDownToInvestAllCash  = pctDownToInvestAllCash;
+		}
+
+		// Runs inside the base constructor call, i.e. before the constructor body, so arguments are validated before they're used
+		private static string ValidateAndDescribe(int pctDownFromPeakToBuy, int daysOfNonGoingDownToBuy, int pctDownToInvestAllCash)
 		{
 			if (pctDownFromPeakToBuy    <= 0) throw new ArgumentOutOfRangeException(nameof(pctDownFromPeakToBuy));
 			if (daysOfNonGoingDownToBuy <  0) throw new ArgumentOutOfRangeException(nameof(daysOfNonGoingDownToBuy));
 			if (pctDownToInvestAllCash  <= 0) throw new ArgumentOutOfRangeException(nameof(pctDownToInvestAllCash));
 
-			PctDownFromPeakToBuy    = pctDownFromPeakToBuy;
-			DaysOfNonGoingDownToBuy = daysOfNonGoingDownToBuy;
-			PctDownToInvestAllCash  = pctDownToInvestAllCash;
+			return $"For every {pctDownFromPeakToBuy}% down from the peak, after the price hasn't gone down for {daysOfNonGoingDownToBuy} days in a row, " +
+			       $"invest {(decimal)pctDownFromPeakToBuy / pctDownToInvestAllCash:P} of the cash we had at the peak; invest all cash at {pctDownToInvestAllCash}% down. Never sells.";
 		}
 
 		public override bool BuysOnFirstDay => false;
