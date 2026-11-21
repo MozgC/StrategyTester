@@ -137,11 +137,14 @@
 
 		// Few trades per window and never sells, so no trade-count filters; optimize for return relative to drawdown,
 		// since FinalProfitRatio would favour parameters that rarely buy in a rising market.
+		// Equal return/drawdown (e.g. several runs with no drawdown, which all get the 9999 sentinel) -> higher profit wins.
 		public static WalkForwardSetup WalkForwardSetup => new(
 			StrategyName:       "Buy when down",
 			GenerateStrategies: ParameterGrid,
 			InSampleFilter:     _ => true,
 			OutOfSampleFilter:  r => r.FinalProfitRatio > 1,
-			IsLastBetter:       x => x.last.ReturnToDrawdownRatio > x.best.ReturnToDrawdownRatio);
+			IsLastBetter:       x => x.last.ReturnToDrawdownRatio != x.best.ReturnToDrawdownRatio
+				? x.last.ReturnToDrawdownRatio > x.best.ReturnToDrawdownRatio
+				: x.last.FinalProfitRatio      > x.best.FinalProfitRatio);
 	}
 }

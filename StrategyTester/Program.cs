@@ -5,7 +5,7 @@ namespace StrategyTester
 	partial class Program
 	{
 		// ======== Choose what to test ========
-		private const  string           Security = "USD";
+		private const  string           Security = "SOXL";
 		//private static WalkForwardSetup Setup    => MACrossOverStrategy.WalkForwardSetup;  // or BuyWhenDownStrategy.WalkForwardSetup
 		private static WalkForwardSetup Setup    => BuyWhenDownStrategy.WalkForwardSetup;
 		// =====================================
