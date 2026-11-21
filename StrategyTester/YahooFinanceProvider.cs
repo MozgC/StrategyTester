@@ -13,6 +13,7 @@ namespace StrategyTester
 		public IList<StockPrice> GetLast10YearsOfPrices(string ticker)
 		{
 			var data = _yahooClient.GetChartInfoAsync(ticker, TimeRange._10Years, TimeInterval._1Day).Result;
+			//data = _yahooClient.GetChartInfoAsync(ticker, TimeRange.Max, TimeInterval._1Day).Result;
 
 			/*
 			var data2 = _yahooClient.GetHistoricalDataAsync(ticker, DataFrequency.Daily, DateTime.Today.AddYears(-10),

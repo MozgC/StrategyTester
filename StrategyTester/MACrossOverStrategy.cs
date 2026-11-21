@@ -29,11 +29,6 @@
 			return (MaDays, EmaDays);
 		}
 
-		public override Func<RunReport, decimal> GetHeatmapValue()
-		{
-			return r => r.FinalProfitRatio;
-		}
-
 		protected override bool CalcDailyParametersAndDecideIfCanBuyOrSell(int currentIndex)
 		{
 			var dp = DataPoints[currentIndex];

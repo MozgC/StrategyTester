@@ -79,7 +79,7 @@ namespace StrategyTester
 			IEnumerable<Strategy> GenerateStrategies()
 			{
 				int minMA   = 20;
-				int maCount = 20;
+				int maCount = 180;
 
 				for (int maDays = minMA; maDays < minMA + maCount; maDays++)
 				{
@@ -92,7 +92,7 @@ namespace StrategyTester
 
 			var walkForwardTester = new WalkForwardTester(GenerateStrategies, x => x.last.FinalProfitRatio > x.best.FinalProfitRatio);
 
-			var result = walkForwardTester.Run(dataPoints, initialInvestment, 48, 12, rr => rr.TotalTradeCount >= 30, rr => rr.TotalTradeCount >= 6);
+			var result = walkForwardTester.Run(dataPoints, initialInvestment, 48, 12, rr => rr.TotalTradeCount >= 20, rr => rr.TotalTradeCount >= 6);
 
 			return result;
 		}

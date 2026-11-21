@@ -49,7 +49,7 @@
 
 		public virtual Func<RunReport, decimal> GetHeatmapValue()
 		{
-			return _ => 0;
+			return r => r.FinalProfitRatio;
 		}
 
 		protected Strategy(string ticker, string name, string description, string parametersDescription)
