@@ -43,7 +43,7 @@ public static class MonteCarloTester
 			ParallelExtensions.RunInParallel(x, shuffledDataPoints =>
 			{
 				var s           = oosRunReport.Strategy.ShallowClone();
-				var mcRunReport = s.Run(shuffledDataPoints, false, oosRunReport.InitialInvestment, oosRunReport.InitialCash, oosRunReport.InitialShares, oosRunReport.InitialShares > 0? prevReport?.LastBuy : null);
+				var mcRunReport = s.Run(shuffledDataPoints, false, oosRunReport.InitialInvestment, oosRunReport.InitialCash, oosRunReport.InitialShares, oosRunReport.InitialShares > 0? prevReport?.LastBuy : null, oosRunReport.InitialCostBasis);
 
 				lock (results)
 				{

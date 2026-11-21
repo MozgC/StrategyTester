@@ -26,6 +26,9 @@ internal sealed class ScriptedStrategy : Strategy
 	public bool ExitAlways  { get; init; }
 	public int  HeatmapX    { get; init; }
 
+	/// <summary>Amount to invest on an entry signal; null = all cash (the base default).</summary>
+	public decimal? BuyAmount { get; init; }
+
 	public ScriptedStrategy(IEnumerable<int>? enterDays = null, IEnumerable<int>? exitDays = null)
 		: base("TEST", "Scripted", "Scripted", "Scripted")
 	{
@@ -35,6 +38,8 @@ internal sealed class ScriptedStrategy : Strategy
 	}
 
 	public override (decimal x, decimal y) GetHeatmapKey() => (HeatmapX, 0);
+
+	protected override decimal GetAmountToBuy() => BuyAmount ?? base.GetAmountToBuy();
 
 	protected override bool CalcDailyParametersAndDecideIfCanBuyOrSell(int currentIndex)
 	{

@@ -62,6 +62,10 @@
 		public decimal    FinalInvestment; // Either cash or shares value at end
 		public decimal    FinalCash;
 		public decimal    FinalShares;
+
+		// Purchase cost of the shares held at start/end (sum of shares bought * buy price), carried between walk-forward runs for P&L
+		public decimal    InitialCostBasis;
+		public decimal    FinalCostBasis;
 		public StockPrice LastBuy;
 
 		public int        TotalTradeCount;

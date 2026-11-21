@@ -11,6 +11,8 @@
 		public    decimal     InitialInvestment = 1000;
 
 		public    decimal     FinalInvestment;
+
+		// Minimum number of days between the last buy and a sell. Does not restrict buying.
 		public    int         HoldingPeriodDays = 30;
 
 		public    int         TotalTradeCount;
@@ -18,26 +20,30 @@
 
 		public    string      Debug = "";
 
+		// A strategy may hold cash and shares at the same time; the investment value is Cash + Shares * price.
 		protected decimal     Cash;
-
 		protected decimal     Shares;
 		protected StockPrice? LastBuy;
 
+		// Purchase cost of the shares currently held (sum of shares bought * buy price). Used for per-trade P&L.
+		protected decimal     CostBasis;
+
+		// Peak investment value (Cash + Shares * price), used for drawdown
 		public    decimal     Peak;
 		public    decimal     GrossProfit;
 		public    decimal     GrossLoss;
 
 		public IList<StockPrice> DataPoints;
-		
-		private Func<bool> _overrideEntryLogic;
-		private Func<bool> _overrideExitLogic;
 
-		public void OverrideEntryLogic(Func<bool> logic)
+		private Func<bool>? _overrideEntryLogic;
+		private Func<bool>? _overrideExitLogic;
+
+		public void OverrideEntryLogic(Func<bool>? logic)
 		{
 			_overrideEntryLogic = logic;
 		}
 
-		public void OverrideExitLogic(Func<bool> logic)
+		public void OverrideExitLogic(Func<bool>? logic)
 		{
 			_overrideExitLogic = logic;
 		}
@@ -52,6 +58,13 @@
 			return r => r.FinalProfitRatio;
 		}
 
+		/// <summary>
+		/// Whether Run(buyOnFirstDay: true) invests all cash on the first day.
+		/// Strategies that decide all entries themselves override this with false, and callers like WalkForwardTester then
+		/// leave the money in cash until the strategy says to buy.
+		/// </summary>
+		public virtual bool BuysOnFirstDay => true;
+
 		protected Strategy(string ticker, string name, string description, string parametersDescription)
 		{
 			Ticker                   = ticker;
@@ -65,14 +78,15 @@
 		{
 			return [];
 		}
-		
-		private void Initialize(IList<StockPrice> dataPoints, bool buyOnFirstDay, decimal initialInvestment, decimal initialCash, decimal initialShares, StockPrice? lastBuy)
+
+		private void Initialize(IList<StockPrice> dataPoints, bool buyOnFirstDay, decimal initialInvestment, decimal initialCash, decimal initialShares, StockPrice? lastBuy, decimal? initialCostBasis)
 		{
 			DataPoints        = dataPoints;
 			InitialCash       = initialCash;
 			InitialInvestment = initialInvestment;
 			Shares            = initialShares;
 			LastBuy           = lastBuy;
+			CostBasis         = initialCostBasis ?? initialShares * (lastBuy ?? dataPoints[0]).ClosingPrice;
 
 			Cash               = InitialCash;
 			Peak               = InitialInvestment;
@@ -82,52 +96,68 @@
 			GrossProfit        = 0;
 			GrossLoss          = 0;
 
-			if (Cash > 0 && buyOnFirstDay)
+			OnRunStarting();
+
+			if (Cash > 0 && buyOnFirstDay && BuysOnFirstDay)
 			{
-				Shares      = Cash / DataPoints[0].ClosingPrice;
-				LastBuy     = DataPoints[0];
-				Debug       = InvestmentStrategy.GetBuyingSharesAtForString(DataPoints[0], Cash);
-				Cash        = 0;
+				Debug = InvestmentStrategy.GetBuyingSharesAtForString(DataPoints[0], Cash);
+				AddShares(DataPoints[0], Cash); // not counted as a trade
 			}
 		}
-		
+
+		/// <summary>Called at the start of every Run, before the first day. Reset per-run state here.</summary>
+		protected virtual void OnRunStarting() { }
+
+		/// <summary>Called after every buy (including the first-day buy).</summary>
+		protected virtual void OnBought(StockPrice dp, decimal amount) { }
+
+		/// <summary>How much cash to invest when ShouldEnter (or the entry override) says to buy. Capped at Cash; 0 means don't buy.</summary>
+		protected virtual decimal GetAmountToBuy() => Cash;
+
 		protected abstract bool CalcDailyParametersAndDecideIfCanBuyOrSell(int currentIndex);
 
 		public RunReport Run(
-			IList<StockPrice> dataPoints, 
-			bool              buyOnFirstDay, 
-			decimal           initialInvestment = 1000, // either cash or shares value at start
-			decimal           initialCash       = 1000, 
-			decimal           initialShares     = 0, 
-			StockPrice?       lastBuy           = null)
+			IList<StockPrice> dataPoints,
+			bool              buyOnFirstDay,
+			decimal           initialInvestment = 1000, // cash + shares value at start
+			decimal           initialCash       = 1000,
+			decimal           initialShares     = 0,
+			StockPrice?       lastBuy           = null,
+			decimal?          initialCostBasis  = null) // default: initialShares bought at lastBuy's price (or the first price)
 		{
-			Initialize(dataPoints, buyOnFirstDay, initialInvestment, initialCash, initialShares, lastBuy);
+			Initialize(dataPoints, buyOnFirstDay, initialInvestment, initialCash, initialShares, lastBuy, initialCostBasis);
+
+			decimal initialCostBasisUsed = CostBasis;
 
 			for (int i = 0; i < DataPoints.Count; i++)
 			{
-				var dp = dataPoints[i];
+				var dp = DataPoints[i];
 
-				if (Shares > 0 && Shares * dp.ClosingPrice > Peak)
-					Peak = Shares * dp.ClosingPrice;
-				
-				decimal currentInvestment = Cash > 0 ? Cash : Shares * dp.ClosingPrice;
+				decimal currentInvestment = Cash + Shares * dp.ClosingPrice;
+
+				if (currentInvestment > Peak)
+					Peak = currentInvestment;
 
 				decimal currentDrawdownFromPeak = (Peak - currentInvestment) / Peak * 100;
 
 				if (currentDrawdownFromPeak > MaxDrawdownPercent)
 					MaxDrawdownPercent = currentDrawdownFromPeak;
 
-				if (HoldingPeriodDays > 0 && Shares > 0 && dp.Date.Date - LastBuy.Date.Date < TimeSpan.FromDays(HoldingPeriodDays))
-					continue;
-					
 				if (!CalcDailyParametersAndDecideIfCanBuyOrSell(i))
 					continue;
 
 				if (Cash > 0 && EffectiveShouldEnter())
 				{
-					Buy(dp);
+					decimal amount = Math.Min(GetAmountToBuy(), Cash);
+
+					if (amount > 0)
+					{
+						Buy(dp, amount);
+						continue;
+					}
 				}
-				else if (Shares > 0 && EffectiveShouldExit())
+
+				if (Shares > 0 && !IsInHoldingPeriod(dp) && EffectiveShouldExit())
 				{
 					Sell(dp);
 				}
@@ -135,7 +165,7 @@
 
 			var lastPrice = DataPoints.Last().ClosingPrice;
 
-			FinalInvestment = Cash > 0 ? Cash : Shares * lastPrice;
+			FinalInvestment = Cash + Shares * lastPrice;
 
 			var avgPercent = Helpers.GetAvgPercentPerYear(initialInvestment, FinalInvestment, Helpers.GetYears(DataPoints));
 			Debug += $"Avg year %: {avgPercent:N}";
@@ -171,42 +201,59 @@
 				profitFactor,
 				Debug);
 
+			runReport.InitialCostBasis = initialCostBasisUsed;
+			runReport.FinalCostBasis   = CostBasis;
+
 			runReport.SetHeatmapKeyAndValue(GetHeatmapKey(), GetHeatmapValue()(runReport));
 
 			return runReport;
 		}
 
-		protected void Buy(StockPrice dp)
-		{
-			string str = $"{dp.Date:d} Buying {Cash / dp.ClosingPrice:N} shares at {dp.ClosingPrice:C} for  {Cash:C}\n";
-			Debug += str;
+		private bool IsInHoldingPeriod(StockPrice dp) =>
+			HoldingPeriodDays > 0 && LastBuy != null && dp.Date.Date - LastBuy.Date.Date < TimeSpan.FromDays(HoldingPeriodDays);
 
-			Shares  = Cash / dp.ClosingPrice;
-			Cash    = 0;
-			LastBuy = dp;
+		protected void Buy(StockPrice dp, decimal amount)
+		{
+			Debug += $"{dp.Date:d} Buying {amount / dp.ClosingPrice:N} shares at {dp.ClosingPrice:C} for  {amount:C}\n";
+
+			AddShares(dp, amount);
 
 			TotalTradeCount++;
 		}
 
+		private void AddShares(StockPrice dp, decimal amount)
+		{
+			decimal shares = amount / dp.ClosingPrice;
+
+			Shares    += shares;
+			CostBasis += shares * dp.ClosingPrice;
+			Cash      -= amount;
+			LastBuy    = dp;
+
+			OnBought(dp, amount);
+		}
+
+		// Sells all shares
 		protected void Sell(StockPrice dp)
 		{
-			string str = $"{dp.Date:d} Selling {Shares:N} shares at {dp.ClosingPrice:C} for  {Shares * dp.ClosingPrice:C}\n";
-			Debug += str;
+			decimal proceeds = Shares * dp.ClosingPrice;
 
-			Cash = Shares * dp.ClosingPrice;
+			Debug += $"{dp.Date:d} Selling {Shares:N} shares at {dp.ClosingPrice:C} for  {proceeds:C}\n";
 
-			decimal tradeProfitAndLoss = Cash - Shares * LastBuy.ClosingPrice;
+			decimal tradeProfitAndLoss = proceeds - CostBasis;
 
 			if (tradeProfitAndLoss > 0)
 				GrossProfit += tradeProfitAndLoss;
 			else if (tradeProfitAndLoss < 0)
 				GrossLoss -= tradeProfitAndLoss; // grossLoss increases by absolute loss
 
-			Shares = 0;
+			Cash     += proceeds;
+			Shares    = 0;
+			CostBasis = 0;
 
 			TotalTradeCount++;
 		}
-		
+
 		// Small helper to centralize “effective” logic
 		private bool EffectiveShouldEnter() => _overrideEntryLogic?.Invoke() ?? ShouldEnter();
 
@@ -214,7 +261,7 @@
 
 		protected abstract bool ShouldEnter();
 		protected abstract bool ShouldExit();
-		
+
 		public Strategy ShallowClone()
 		{
 			return FastCloner.FastCloner.ShallowClone(this);

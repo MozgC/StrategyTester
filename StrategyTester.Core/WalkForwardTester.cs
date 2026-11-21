@@ -31,6 +31,7 @@ namespace StrategyTester
 			decimal initialShares           = 0;
 			decimal initialCash             = initialInvestment;
 			StockPrice? lastBuy             = null;
+			decimal? initialCostBasis       = null;
 			bool firstOosRun                = true;
 			
 			Console.Write(Environment.NewLine + "Beginning Walk-Forward..." + Environment.NewLine);
@@ -49,7 +50,7 @@ namespace StrategyTester
 				
 				Console.WriteLine($"Best strategy: {bestStrategy.ParametersDescription}");
 
-				var oosRunReport  = bestStrategy.Run(inSampleAndOutSampleData.OutOfSample, firstOosRun, initialInvestment, initialCash, initialShares, lastBuy);
+				var oosRunReport  = bestStrategy.Run(inSampleAndOutSampleData.OutOfSample, firstOosRun, initialInvestment, initialCash, initialShares, lastBuy, initialCostBasis);
 
 				bool passedOOSFilter = oosFilter == null || oosFilter(oosRunReport);
 				
@@ -60,6 +61,7 @@ namespace StrategyTester
 				initialCash       = oosRunReport.FinalCash;
 				initialShares     = oosRunReport.FinalShares;
 				lastBuy           = oosRunReport.LastBuy;
+				initialCostBasis  = oosRunReport.FinalCostBasis;
 				initialInvestment = oosRunReport.FinalInvestment;
 
 				oosReports .Add(oosRunReport);
