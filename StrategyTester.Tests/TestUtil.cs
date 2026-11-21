@@ -29,6 +29,11 @@ internal sealed class ScriptedStrategy : Strategy
 	/// <summary>Amount to invest on an entry signal; null = all cash (the base default).</summary>
 	public decimal? BuyAmount { get; init; }
 
+	/// <summary>False = ignore Run(buyOnFirstDay: true), like strategies that decide all entries themselves.</summary>
+	public bool AllowBuyOnFirstDay { get; init; } = true;
+
+	public override bool BuysOnFirstDay => AllowBuyOnFirstDay;
+
 	public ScriptedStrategy(IEnumerable<int>? enterDays = null, IEnumerable<int>? exitDays = null)
 		: base("TEST", "Scripted", "Scripted", "Scripted")
 	{

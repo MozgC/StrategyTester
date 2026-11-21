@@ -12,7 +12,7 @@
 
 		public    decimal     FinalInvestment;
 
-		// Minimum number of days between the last buy and a sell. Does not restrict buying.
+		// Minimum number of days between the last buy and a sell (a sell is never on the day of a buy, even with 0). Does not restrict buying.
 		public    int         HoldingPeriodDays = 30;
 
 		public    int         TotalTradeCount;
@@ -161,7 +161,7 @@
 					}
 				}
 
-				if (Shares > 0 && !IsInHoldingPeriod(dp) && EffectiveShouldExit())
+				if (Shares > 0 && !BoughtToday(dp) && !IsInHoldingPeriod(dp) && EffectiveShouldExit())
 				{
 					Sell(dp);
 				}
@@ -212,6 +212,9 @@
 
 			return runReport;
 		}
+
+		// Never buy and sell on the same day (e.g. the first-day buy followed by an exit signal on day 0)
+		private bool BoughtToday(StockPrice dp) => LastBuy != null && LastBuy.Date.Date == dp.Date.Date;
 
 		private bool IsInHoldingPeriod(StockPrice dp) =>
 			HoldingPeriodDays > 0 && LastBuy != null && dp.Date.Date - LastBuy.Date.Date < TimeSpan.FromDays(HoldingPeriodDays);

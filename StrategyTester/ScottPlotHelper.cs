@@ -6,6 +6,7 @@ namespace StrategyTester
 	class ScottPlotHelper
 	{
 		public static void ShowHeatMap(
+			string                                             security,
 			IDictionary<(decimal x, decimal y), List<decimal>> heatMap, 
 			(string x, string y)                               axisLabels, 
 			string                                             valueLabel, 
@@ -54,10 +55,8 @@ namespace StrategyTester
 			var plot = new ScottPlot.Plot();
 
 			var hm = plot.Add.Heatmap(data);
-			// Viridis: perceptually uniform, brightness increases monotonically from low to high (Turbo is dark at both ends).
-			// No smoothing: each cell is a discrete parameter combination, interpolating between them hides cliffs.
-			hm.Colormap = new ScottPlot.Colormaps.Viridis();
-			hm.Smooth = false;
+			hm.Colormap = new ScottPlot.Colormaps.Turbo();
+			hm.Smooth = true;
 
 			if (labelValues)
 			{
@@ -74,7 +73,7 @@ namespace StrategyTester
 			}
 
 			// axis titles
-			plot.Title("HeatMap");
+			plot.Title($"{security} HeatMap");
 			plot.XLabel(axisLabels.x);
 			plot.YLabel(axisLabels.y);
 
@@ -104,7 +103,7 @@ namespace StrategyTester
 			cb.Label = valueLabel;
 			///cb.LabelStyle.FontSize = 24;
 
-			FormsPlotViewer.Launch(plot);
+			FormsPlotViewer.Launch(plot, $"{security} HeatMap");
 		}
 
 		public static void DrawEquityCurve(string ticker, decimal percentOfPassedOosRuns, IList<(DateTime date, decimal equity)> equityCurve)

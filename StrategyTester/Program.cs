@@ -78,7 +78,7 @@ namespace StrategyTester
 
 			ScottPlotHelper.DrawEquityCurve(security, walkForwardResult.OOSRunsPassedOOSFilterCount / (decimal)walkForwardResult.OOSRunReports.Count, walkForwardResult.OOSEquityCurve);
 			var heatmapStrategy = walkForwardResult.OOSRunReports[0].Strategy;
-			ScottPlotHelper.ShowHeatMap(walkForwardResult.InSampleHeatMap, heatmapStrategy.HeatmapAxisLabels, heatmapStrategy.HeatmapValueLabel, false);
+			ScottPlotHelper.ShowHeatMap(security, walkForwardResult.InSampleHeatMap, heatmapStrategy.HeatmapAxisLabels, heatmapStrategy.HeatmapValueLabel, false);
 
 			Console.Read();
 		}

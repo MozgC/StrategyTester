@@ -36,7 +36,19 @@ namespace StrategyTester
 			
 			Console.Write(Environment.NewLine + "Beginning Walk-Forward..." + Environment.NewLine);
 
-			foreach (var inSampleAndOutSampleData in GetInSampleAndOutSampleData(allData, inSampleMonths, outOfSampleMonths))
+			var windows = GetInSampleAndOutSampleData(allData, inSampleMonths, outOfSampleMonths).ToList();
+
+			if (windows.Count == 0)
+			{
+				int months = allData.Select(x => (x.Date.Year, x.Date.Month)).Distinct().Count();
+				string range = allData.Count == 0 ? "no data" : $"{allData[0].Date:yyyy-MM} - {allData[^1].Date:yyyy-MM}";
+
+				throw new ArgumentException(
+					$"Not enough data for walk-forward: need at least {inSampleMonths + outOfSampleMonths} months " +
+					$"({inSampleMonths} in-sample + {outOfSampleMonths} out-of-sample), got {months} ({range}).", nameof(allData));
+			}
+
+			foreach (var inSampleAndOutSampleData in windows)
 			{
 				if (equityCurve.Count == 0)
 					equityCurve.Add((inSampleAndOutSampleData.OutOfSample[0].Date, initialInvestment));
