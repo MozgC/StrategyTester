@@ -127,6 +127,23 @@ public class BuyWhenDownStrategyTests
 	}
 
 	[Test]
+	public void WalkForwardSetup_RunsEndToEnd()
+	{
+		// 3 years of a choppy series: 120-day cycles between 100 and ~70, so there are drawdowns to buy into
+		var data  = Enumerable.Range(0, 1096)
+			.Select(i => new StockPrice(Start.AddDays(i), 85m + 15m * (decimal)Math.Cos(i * 2 * Math.PI / 120)))
+			.ToList();
+		var setup = BuyWhenDownStrategy.WalkForwardSetup;
+
+		var tester = new WalkForwardTester(() => setup.GenerateStrategies("X"), setup.IsLastBetter);
+		var result = tester.Run(data, 1000m, 12, 12, setup.InSampleFilter, setup.OutOfSampleFilter);
+
+		Assert.That(result.OOSRunReports, Has.Count.EqualTo(2));
+		Assert.That(result.OOSRunReports.All(r => r.Strategy is BuyWhenDownStrategy), Is.True);
+		Assert.That(result.OOSRunReports.Sum(r => r.TotalTradeCount), Is.GreaterThan(0));
+	}
+
+	[Test]
 	public void GenerateStrategies_ProducesExpectedParameterGrid()
 	{
 		var strategies = new BuyWhenDownStrategy("X", 10, 0).GenerateStrategies("X").Cast<BuyWhenDownStrategy>().ToList();

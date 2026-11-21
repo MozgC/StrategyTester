@@ -137,10 +137,12 @@ public class MACrossOverStrategyTests
 	{
 		var strategies = new MACrossOverStrategy("X", 1, 2).GenerateStrategies("X").Cast<MACrossOverStrategy>().ToList();
 
-		// MA 20..54, EMA 7..(MA+1)/2
-		Assert.That(strategies, Has.Count.EqualTo(446));
+		// MA 20..199, EMA 7..(MA+1)/2
+		Assert.That(strategies, Has.Count.EqualTo(8820));
 		Assert.That(strategies.All(s => s.EmaDays >= 7 && s.EmaDays * 2 <= s.MaDays + 1), Is.True);
-		Assert.That(strategies.Select(s => (s.EmaDays, s.MaDays)).Distinct().Count(), Is.EqualTo(446));
-		Assert.That(strategies.All(s => s.Ticker == "X"), Is.True);
+		Assert.That(strategies.Select(s => (s.EmaDays, s.MaDays)).Distinct().Count(), Is.EqualTo(8820));
+		Assert.That(strategies.Min(s => s.MaDays), Is.EqualTo(20));
+		Assert.That(strategies.Max(s => s.MaDays), Is.EqualTo(199));
+		Assert.That(strategies.All(s => s.Ticker == "X" && s.HoldingPeriodDays == 30), Is.True);
 	}
 }

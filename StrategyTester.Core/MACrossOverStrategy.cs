@@ -58,18 +58,28 @@
 			return _emaPrev > _maPrev && _currentEMA < _currentMA;
 		}
 
-		public override IEnumerable<Strategy> GenerateStrategies(string ticker)
+		public override IEnumerable<Strategy> GenerateStrategies(string ticker) => ParameterGrid(ticker);
+
+		// MA 20..199 days, EMA 7..(MA+1)/2 days, 30 days holding period
+		public static IEnumerable<Strategy> ParameterGrid(string ticker)
 		{
 			int minMA   = 20;
-			int maCount = 35;
+			int maCount = 180;
 
 			for (int maDays = minMA; maDays < minMA + maCount; maDays++)
 			{
 				for (int emaDays = 7; emaDays <= (maDays + 1) / 2; emaDays += 1)
 				{
-					yield return new MACrossOverStrategy(ticker, emaDays, maDays);
+					yield return new MACrossOverStrategy(ticker, emaDays, maDays, allowSellingAtLoss: true) { HoldingPeriodDays = 30 };
 				}
 			}
 		}
+
+		public static WalkForwardSetup WalkForwardSetup => new(
+			StrategyName:       "MA & EMA crossover",
+			GenerateStrategies: ParameterGrid,
+			InSampleFilter:     r => r.TotalTradeCount >= 20,
+			OutOfSampleFilter:  r => r.TotalTradeCount >= 6,
+			IsLastBetter:       x => x.last.FinalProfitRatio > x.best.FinalProfitRatio);
 	}
 }

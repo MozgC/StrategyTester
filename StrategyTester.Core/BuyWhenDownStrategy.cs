@@ -117,7 +117,10 @@
 			_amountToBuy  = 0;
 		}
 
-		public override IEnumerable<Strategy> GenerateStrategies(string ticker)
+		public override IEnumerable<Strategy> GenerateStrategies(string ticker) => ParameterGrid(ticker);
+
+		// Down % to buy 3..17, non-down days 0..10, invest all cash at 35% down
+		public static IEnumerable<Strategy> ParameterGrid(string ticker)
 		{
 			const int pctDownToInvestAllCash = 35;
 
@@ -129,5 +132,14 @@
 				}
 			}
 		}
+
+		// Few trades per window and never sells, so no trade-count filters; optimize for return relative to drawdown,
+		// since FinalProfitRatio would favour parameters that rarely buy in a rising market.
+		public static WalkForwardSetup WalkForwardSetup => new(
+			StrategyName:       "Buy when down",
+			GenerateStrategies: ParameterGrid,
+			InSampleFilter:     _ => true,
+			OutOfSampleFilter:  r => r.FinalProfitRatio > 1,
+			IsLastBetter:       x => x.last.ReturnToDrawdownRatio > x.best.ReturnToDrawdownRatio);
 	}
 }

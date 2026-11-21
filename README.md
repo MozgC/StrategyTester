@@ -14,16 +14,17 @@ The application also shows an Equity Curve graph and a heatmap of different stra
 The application starts all the optimization and testing for some specific security (ticker) using the Moving Averages Crossover strategy out of the box.  
 You can run the application right away and see the testing results.
 
-You can change the security in Program.cs:
+You can change the security and the strategy at the top of Program.cs:
 
 ```csharp
-string security = "SOXL";
+private const  string           Security = "SOXL";
+private static WalkForwardSetup Setup    => MACrossOverStrategy.WalkForwardSetup;  // or BuyWhenDownStrategy.WalkForwardSetup
 ```
 
 To add your own strategy:
-1. Create a new class derived from Strategy and implement the required methods.
-2. Implement a method similar to WalkForwardTestOnMovingAveragesCrossoverStrategy() in Program.cs
-3. Change the call in Main() to your new method.
+1. Create a new class in StrategyTester.Core derived from Strategy and implement the required methods.
+2. Add a static `WalkForwardSetup` property to it: the parameter grid to optimize over, the in-sample and out-of-sample filters, and the optimization criterion (see MACrossOverStrategy).
+3. Point `Setup` in Program.cs at it.
 
 ### Sample output:
 

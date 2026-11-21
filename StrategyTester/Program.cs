@@ -4,7 +4,12 @@ namespace StrategyTester
 {
 	partial class Program
 	{
-		private const int                  _holdingPeriodDays = 30;
+		// ======== Choose what to test ========
+		private const  string           Security = "SOXL";
+		private static WalkForwardSetup Setup    => MACrossOverStrategy.WalkForwardSetup;  // or BuyWhenDownStrategy.WalkForwardSetup
+		// =====================================
+
+		private const int                  _holdingPeriodDays = 30; // used by Program.OldAndDirty.cs
 		private static IStockPriceProvider _client;
 
 		[STAThread]
@@ -13,9 +18,11 @@ namespace StrategyTester
 			Console.OutputEncoding = System.Text.Encoding.UTF8;
 			Console.InputEncoding  = System.Text.Encoding.UTF8;
 
-			string security = "SOXL";
+			string security = Security;
+			var    setup    = Setup;
 
 			Console.WriteLine("Security: " + security);
+			Console.WriteLine("Strategy: " + setup.StrategyName);
 			decimal initialInvestment = 1000;
 			Console.WriteLine($"Initial investment: {initialInvestment:C}");
 
@@ -28,7 +35,7 @@ namespace StrategyTester
 
 			dataPoints = dataPoints.SkipWhile(dp => dp.Date < fromDate).Where(dp => dp.Date < toDate).ToList();
 
-			var walkForwardResult = WalkForwardTestOnMovingAveragesCrossoverStrategy(security, initialInvestment, dataPoints);
+			var walkForwardResult = RunWalkForward(setup, security, initialInvestment, dataPoints);
 			
 			Console.WriteLine(Environment.NewLine + "Buy & Hold:");
 			decimal buyAndHold = CalcBuyAndHold(initialInvestment, dataPoints.SkipWhile(x => x.Date <= walkForwardResult.OOSRunReports[0].StartDate).ToList());
@@ -74,27 +81,17 @@ namespace StrategyTester
 			Console.Read();
 		}
 
-		private static WalkForwardResult WalkForwardTestOnMovingAveragesCrossoverStrategy(string ticker, decimal initialInvestment, IList<StockPrice> dataPoints)
+		private static WalkForwardResult RunWalkForward(WalkForwardSetup setup, string ticker, decimal initialInvestment, IList<StockPrice> dataPoints)
 		{
-			IEnumerable<Strategy> GenerateStrategies()
-			{
-				int minMA   = 20;
-				int maCount = 180;
+			var walkForwardTester = new WalkForwardTester(() => setup.GenerateStrategies(ticker), setup.IsLastBetter);
 
-				for (int maDays = minMA; maDays < minMA + maCount; maDays++)
-				{
-					for (int emaDays = 7; emaDays <= (maDays + 1) / 2; emaDays += 1)
-					{
-						yield return new MACrossOverStrategy(ticker, emaDays, maDays, true) { HoldingPeriodDays = 30 };
-					}
-				}
-			}
-
-			var walkForwardTester = new WalkForwardTester(GenerateStrategies, x => x.last.FinalProfitRatio > x.best.FinalProfitRatio);
-
-			var result = walkForwardTester.Run(dataPoints, initialInvestment, 48, 12, rr => rr.TotalTradeCount >= 20, rr => rr.TotalTradeCount >= 6);
-
-			return result;
+			return walkForwardTester.Run(
+				dataPoints, 
+				initialInvestment, 
+				setup.InSampleMonths, 
+				setup.OutOfSampleMonths, 
+				setup.InSampleFilter, 
+				setup.OutOfSampleFilter);
 		}
 	}
 }
