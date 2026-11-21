@@ -1,62 +1,72 @@
 ﻿using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
 
 namespace StrategyTester
 {
 	public static class IndicatorFunctions
 	{
-		private static ConcurrentDictionary<(string ticker, DateTime currentDate, int periods), decimal> _maDict  = new ConcurrentDictionary<(string ticker, DateTime currentDate, int periods), decimal>();
-		private static ConcurrentDictionary<(string ticker, DateTime currentDate, int periods), decimal> _emaDict = new ConcurrentDictionary<(string ticker, DateTime currentDate, int periods), decimal>();
+		// Caches are scoped to the data series instance (by reference), not to ticker/date: Monte Carlo shuffles keep the
+		// ticker and dates but change prices, and walk-forward windows change where the EMA seed starts.
+		// ConditionalWeakTable lets a series' cache be collected together with the series.
+		// NOTE: a series must not be mutated after indicators have been calculated on it.
+		private static readonly ConditionalWeakTable<IList<StockPrice>, ConcurrentDictionary<(int index, int periods), decimal>> _maCache  = new();
+		private static readonly ConditionalWeakTable<IList<StockPrice>, ConcurrentDictionary<int, decimal[]>>                    _emaCache = new();
 
+		/// <param name="ticker">Not used; kept for call-site compatibility.</param>
 		public static decimal? MovingAverage(string ticker, IList<StockPrice> dataPoints, int periods, int currentDayIndex)
 		{
-			if (currentDayIndex < periods) return null;
+			if (currentDayIndex < periods - 1) return null;  // Need 'periods' points: indexes currentDayIndex-periods+1 .. currentDayIndex
 
-			var currentDate = dataPoints[currentDayIndex].Date;
-				
-			if (_maDict.TryGetValue((ticker, currentDate, periods), out decimal res))
-				return res;
+			var cache = _maCache.GetValue(dataPoints, _ => new ConcurrentDictionary<(int index, int periods), decimal>());
 
-			decimal sum = 0;
-
-			for (int i = currentDayIndex; i > currentDayIndex - periods; i--)
+			return cache.GetOrAdd((currentDayIndex, periods), key =>
 			{
-				sum += dataPoints[i].ClosingPrice;
-			}
+				decimal sum = 0;
 
-			return _maDict[(ticker, currentDate, periods)] = sum / periods;
+				for (int i = key.index; i > key.index - key.periods; i--)
+				{
+					sum += dataPoints[i].ClosingPrice;
+				}
+
+				return sum / key.periods;
+			});
 		}
 
+		/// <param name="ticker">Not used; kept for call-site compatibility.</param>
 		public static decimal? ExponentialMovingAverage(string ticker, IList<StockPrice> dataPoints, int periods, int currentDayIndex)
 		{
 			if (currentDayIndex < periods - 1) return null;  // Need at least 'periods' points for SMA seed
 
-			var currentDate = dataPoints[currentDayIndex].Date;
-				
-			if (_emaDict.TryGetValue((ticker, currentDate, periods), out decimal res))
-				return res;
+			var cache = _emaCache.GetValue(dataPoints, _ => new ConcurrentDictionary<int, decimal[]>());
+			var emas  = cache.GetOrAdd(periods, p => CalculateEmaSeries(dataPoints, p));
+
+			return emas[currentDayIndex];
+		}
+
+		// EMA for the whole series in one pass, seeded with the SMA of the first 'periods' prices.
+		// Entries before index periods-1 are unused (callers get null for them).
+		private static decimal[] CalculateEmaSeries(IList<StockPrice> dataPoints, int periods)
+		{
+			var emas = new decimal[dataPoints.Count];
+
+			if (dataPoints.Count < periods)
+				return emas;
 
 			var alpha = 2m / (periods + 1m);
 
-			// Allocate array for all EMAs up to currentDayIndex (0-based indexing)
-			var emas = new decimal[currentDayIndex + 1];
-
-			// Step 1: Seed the first EMA as SMA of first 'periods' closing prices
 			decimal sma = 0m;
 			for (int i = 0; i < periods; i++)
 			{
 				sma += dataPoints[i].ClosingPrice;
 			}
-			emas[periods - 1] = sma / periods;  // EMA at index periods-1
+			emas[periods - 1] = sma / periods;
 
-			var sma2 = MovingAverage(ticker, dataPoints, periods, dataPoints.Count - 1);
-
-			// Step 2: Recurse forward from seed to currentDayIndex
-			for (int i = periods; i <= currentDayIndex; i++)
+			for (int i = periods; i < dataPoints.Count; i++)
 			{
 				emas[i] = alpha * dataPoints[i].ClosingPrice + (1 - alpha) * emas[i - 1];
 			}
 
-			return _emaDict[(ticker, currentDate, periods)] = emas[currentDayIndex];
+			return emas;
 		}
 	}
 }

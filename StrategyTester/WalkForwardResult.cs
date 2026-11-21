@@ -12,7 +12,7 @@ public class WalkForwardResult
 	
 	public decimal FinalInvestment => OOSRunReports.Last().FinalInvestment;
 
-	public decimal PercentOfOOSRunsPassedFilter => OOSRunsPassedOOSFilterCount / OOSRunReports.Count;
+	public decimal PercentOfOOSRunsPassedFilter => (decimal)OOSRunsPassedOOSFilterCount / OOSRunReports.Count;
 
 	public WalkForwardResult(
 		IList<RunReport>                                            ooSRunReports, 

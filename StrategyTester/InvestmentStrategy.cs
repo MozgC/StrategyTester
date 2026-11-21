@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
 
 namespace StrategyTester;
 
@@ -15,11 +16,15 @@ public abstract class InvestmentStrategy
 
 	public abstract (decimal result, string log) Execute(IList<StockPrice> dataPoints);
 
-	private static ConcurrentDictionary<(int currentDayIndex, int periodInDays), (decimal minPrice, decimal maxPrice)> _minMaxPrice = new ConcurrentDictionary<(int currentDayIndex, int periodInDays), (decimal minPrice, decimal maxPrice)>();
+	// Cache scoped to the data series instance (by reference): the same index/period means different things in different series.
+	// NOTE: a series must not be mutated after min/max has been calculated on it.
+	private static readonly ConditionalWeakTable<IList<StockPrice>, ConcurrentDictionary<(int currentDayIndex, int periodInDays), (decimal minPrice, decimal maxPrice)>> _minMaxPrice = new();
 
 	public static (decimal minPrice, decimal maxPrice) GetMinAndMaxPriceForPeriod(IList<StockPrice> dataPoints, int currentDayIndex, int periodInDays)
 	{
-		if (_minMaxPrice.TryGetValue((currentDayIndex, periodInDays), out var res))
+		var cache = _minMaxPrice.GetValue(dataPoints, _ => new ConcurrentDictionary<(int currentDayIndex, int periodInDays), (decimal minPrice, decimal maxPrice)>());
+
+		if (cache.TryGetValue((currentDayIndex, periodInDays), out var res))
 			return res;
 
 		decimal min = dataPoints[currentDayIndex].ClosingPrice;
@@ -40,7 +45,7 @@ public abstract class InvestmentStrategy
 			prevDay--;
 		}
 
-		return _minMaxPrice[(currentDayIndex, periodInDays)] = (min, max);
+		return cache[(currentDayIndex, periodInDays)] = (min, max);
 	}
 
 	public static IEnumerable<(StockPrice dp, int index)> GetFirstBusinessDatesOfEachMonth(IList<StockPrice> dps, bool includeFirstDataPoint)

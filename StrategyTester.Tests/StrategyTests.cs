@@ -5,9 +5,6 @@ namespace StrategyTester.Tests;
 [TestFixture]
 public class StrategyRunTests
 {
-	[SetUp]
-	public void SetUp() => ClearStaticCaches();
-
 	[Test]
 	public void Run_TracksTradesProfitFactorAndDrawdown()
 	{
@@ -106,9 +103,6 @@ public class StrategyRunTests
 [TestFixture]
 public class MACrossOverStrategyTests
 {
-	[SetUp]
-	public void SetUp() => ClearStaticCaches();
-
 	[Test]
 	public void Run_BuysOnceWhenEmaCrossesAboveMaAfterBottom()
 	{

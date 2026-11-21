@@ -1,6 +1,3 @@
-using System.Collections;
-using System.Reflection;
-
 namespace StrategyTester.Tests;
 
 internal static class TestUtil
@@ -13,27 +10,7 @@ internal static class TestUtil
 	public static List<StockPrice> Daily(DateTime start, params decimal[] prices) =>
 		prices.Select((p, i) => new StockPrice(start.AddDays(i), p)).ToList();
 
-	/// <summary>IndicatorFunctions caches by ticker, so every test gets its own.</summary>
 	public static string UniqueTicker() => "T_" + Guid.NewGuid().ToString("N");
-
-	/// <summary>
-	/// InvestmentStrategy and IndicatorFunctions keep process-wide static caches that are not keyed by dataset,
-	/// so results leak between tests. Clear them before each test to keep tests order-independent.
-	/// </summary>
-	public static void ClearStaticCaches()
-	{
-		Clear(typeof(InvestmentStrategy), "_minMaxPrice");
-		Clear(typeof(IndicatorFunctions), "_maDict");
-		Clear(typeof(IndicatorFunctions), "_emaDict");
-	}
-
-	private static void Clear(Type type, string fieldName)
-	{
-		var field = type.GetField(fieldName, BindingFlags.NonPublic | BindingFlags.Static)
-			?? throw new InvalidOperationException($"{type.Name}.{fieldName} not found - update TestUtil.ClearStaticCaches().");
-
-		((IDictionary)field.GetValue(null)!).Clear();
-	}
 }
 
 /// <summary>

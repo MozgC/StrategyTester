@@ -5,9 +5,6 @@ namespace StrategyTester.Tests;
 [TestFixture]
 public class InvestmentStrategyTests
 {
-	[SetUp]
-	public void SetUp() => ClearStaticCaches();
-
 	[Test]
 	public void GetMinAndMaxPriceForPeriod_LooksBackStrictlyLessThanPeriodDays()
 	{

@@ -3,20 +3,12 @@ using static StrategyTester.Tests.TestUtil;
 
 namespace StrategyTester.Tests;
 
-/// <summary>
-/// Tests asserting the intended behaviour where the current code is wrong. They FAIL until the bug is fixed.
-/// Exclude them with:  dotnet test --filter "TestCategory!=KnownBug"
-/// </summary>
-[TestFixture, Category("KnownBug")]
-public class KnownBugTests
+/// <summary>Regression tests for bugs fixed in Nov 2026.</summary>
+[TestFixture]
+public class RegressionTests
 {
-	[SetUp]
-	public void SetUp() => ClearStaticCaches();
-
 	/// <summary>
-	/// _minMaxPrice is keyed by (index, period) only, so a second dataset gets the first one's min/max.
-	/// Affects BuyLowSellHigh / SaveCashInvestWhenDrop whenever more than one series (ticker, IS window,
-	/// Monte Carlo shuffle) is evaluated in the same process.
+	/// _minMaxPrice used to be keyed by (index, period) only, so a second dataset got the first one's min/max.
 	/// </summary>
 	[Test]
 	public void GetMinAndMaxPriceForPeriod_CacheMustNotLeakAcrossDatasets()
@@ -29,9 +21,8 @@ public class KnownBugTests
 	}
 
 	/// <summary>
-	/// MA/EMA caches are keyed by (ticker, date, periods). Monte Carlo shuffles keep the ticker and dates but change
-	/// prices, so MACrossOver on a shuffled path reads the real series' indicators. Walk-forward IS windows have the
-	/// same issue for EMA, whose value depends on where the window (and therefore the SMA seed) starts.
+	/// MA/EMA caches used to be keyed by (ticker, date, periods), so Monte Carlo shuffles (same ticker and dates,
+	/// different prices) and walk-forward windows (different EMA seed) read another series' indicators.
 	/// </summary>
 	[Test]
 	public void ExponentialMovingAverage_CacheMustNotLeakAcrossDatasetsWithSameTickerAndDates()
@@ -45,8 +36,7 @@ public class KnownBugTests
 	}
 
 	/// <summary>
-	/// MovingAverage returns null at index periods-1 although the window is full (guard should be
-	/// currentDayIndex &lt; periods - 1, as in ExponentialMovingAverage). Delays MACrossOver signals by a day.
+	/// MovingAverage used to return null at index periods-1 although the window is full.
 	/// </summary>
 	[Test]
 	public void MovingAverage_IsAvailableOnceWindowIsFull()
@@ -57,8 +47,8 @@ public class KnownBugTests
 	}
 
 	/// <summary>
-	/// BuyLowSellHigh never updates paidPrice after a re-buy, so the sell target stays relative to day 0's price.
-	/// Here: re-buy @5, price goes to 6 (+20%) but the code waits for 11.
+	/// BuyLowSellHigh used to keep the sell target relative to day 0's price after a re-buy.
+	/// Here: re-buy @5, price goes to 6 (+20%) - must sell, not wait for 11.
 	/// </summary>
 	[Test]
 	public void BuyLowSellHigh_SellTargetMustBeRelativeToLastBuyPrice()
@@ -69,7 +59,7 @@ public class KnownBugTests
 		Assert.That(result, Is.EqualTo(1320m).Within(0.0000001m));
 	}
 
-	/// <summary>int / int: returns 0 unless every run passed.</summary>
+	/// <summary>Used int / int, returning 0 unless every run passed.</summary>
 	[Test]
 	public void PercentOfOOSRunsPassedFilter_MustNotUseIntegerDivision()
 	{

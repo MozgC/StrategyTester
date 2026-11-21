@@ -43,8 +43,9 @@ public class BuyLowSellHighStrategy : InvestmentStrategy
 				if (price <= maxBuyPrice)
 				{
 					debug += InvestmentStrategy.GetBuyingSharesAtForString(dataPoints[i], cash);
-					shares = cash / price;
-					cash   = 0;
+					shares    = cash / price;
+					cash      = 0;
+					paidPrice = price;  // next sell target is relative to this buy
 				}
 			}
 		}

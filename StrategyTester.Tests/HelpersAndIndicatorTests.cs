@@ -35,9 +35,6 @@ public class IndicatorFunctionsTests
 {
 	private static readonly decimal[] OneToTen = Enumerable.Range(1, 10).Select(i => (decimal)i).ToArray();
 
-	[SetUp]
-	public void SetUp() => ClearStaticCaches();
-
 	[Test]
 	public void MovingAverage_AveragesTrailingWindowIncludingCurrentDay()
 	{
@@ -57,13 +54,13 @@ public class IndicatorFunctionsTests
 	}
 
 	[Test]
-	public void MovingAverage_DifferentTickersDoNotShareCache()
+	public void MovingAverage_DifferentSeriesDoNotShareCache()
 	{
 		var a = Daily(1m, 1m, 1m, 1m);
 		var b = Daily(5m, 5m, 5m, 5m);
 
-		Assert.That(IndicatorFunctions.MovingAverage("A_" + UniqueTicker(), a, 3, 3), Is.EqualTo(1m));
-		Assert.That(IndicatorFunctions.MovingAverage("B_" + UniqueTicker(), b, 3, 3), Is.EqualTo(5m));
+		Assert.That(IndicatorFunctions.MovingAverage("SAME", a, 3, 3), Is.EqualTo(1m));
+		Assert.That(IndicatorFunctions.MovingAverage("SAME", b, 3, 3), Is.EqualTo(5m));
 	}
 
 	[Test]

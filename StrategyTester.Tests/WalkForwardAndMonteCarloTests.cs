@@ -9,9 +9,6 @@ public class WalkForwardTesterTests
 	private static readonly Func<(RunReport best, RunReport last), bool> HigherFinalInvestment =
 		r => r.last.FinalInvestment > r.best.FinalInvestment;
 
-	[SetUp]
-	public void SetUp() => ClearStaticCaches();
-
 	[Test]
 	public void FindBestStrategyOnInSample_PicksBestAndFillsHeatmap()
 	{
@@ -82,9 +79,6 @@ public class WalkForwardTesterTests
 public class MonteCarloTesterTests
 {
 	private double _total;
-
-	[SetUp]
-	public void SetUp() => ClearStaticCaches();
 
 	private static List<StockPrice> Wiggly(int count) =>
 		Daily(Enumerable.Range(0, count).Select(i => 100m + (i % 7) * 3m - (i % 4) * 2m).ToArray());
