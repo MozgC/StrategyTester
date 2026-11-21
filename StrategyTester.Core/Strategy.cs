@@ -58,6 +58,10 @@
 			return r => r.FinalProfitRatio;
 		}
 
+		// Heatmap labels: what the two GetHeatmapKey() parameters are, and what GetHeatmapValue() measures
+		public virtual (string x, string y) HeatmapAxisLabels => ("X", "Y");
+		public virtual string               HeatmapValueLabel => "Profit ratio";
+
 		/// <summary>
 		/// Whether Run(buyOnFirstDay: true) invests all cash on the first day.
 		/// Strategies that decide all entries themselves override this with false, and callers like WalkForwardTester then

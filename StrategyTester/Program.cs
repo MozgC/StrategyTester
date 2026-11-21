@@ -5,8 +5,9 @@ namespace StrategyTester
 	partial class Program
 	{
 		// ======== Choose what to test ========
-		private const  string           Security = "SOXL";
-		private static WalkForwardSetup Setup    => MACrossOverStrategy.WalkForwardSetup;  // or BuyWhenDownStrategy.WalkForwardSetup
+		private const  string           Security = "USD";
+		//private static WalkForwardSetup Setup    => MACrossOverStrategy.WalkForwardSetup;  // or BuyWhenDownStrategy.WalkForwardSetup
+		private static WalkForwardSetup Setup    => BuyWhenDownStrategy.WalkForwardSetup;
 		// =====================================
 
 		private const int                  _holdingPeriodDays = 30; // used by Program.OldAndDirty.cs
@@ -76,7 +77,8 @@ namespace StrategyTester
 			}
 
 			ScottPlotHelper.DrawEquityCurve(security, walkForwardResult.OOSRunsPassedOOSFilterCount / (decimal)walkForwardResult.OOSRunReports.Count, walkForwardResult.OOSEquityCurve);
-			ScottPlotHelper.ShowHeatMap(walkForwardResult.InSampleHeatMap, false);
+			var heatmapStrategy = walkForwardResult.OOSRunReports[0].Strategy;
+			ScottPlotHelper.ShowHeatMap(walkForwardResult.InSampleHeatMap, heatmapStrategy.HeatmapAxisLabels, heatmapStrategy.HeatmapValueLabel, false);
 
 			Console.Read();
 		}

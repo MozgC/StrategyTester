@@ -29,6 +29,8 @@
 			return (MaDays, EmaDays);
 		}
 
+		public override (string x, string y) HeatmapAxisLabels => ("MA Days", "EMA Days");
+
 		protected override bool CalcDailyParametersAndDecideIfCanBuyOrSell(int currentIndex)
 		{
 			var dp = DataPoints[currentIndex];

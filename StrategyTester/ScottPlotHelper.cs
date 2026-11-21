@@ -5,7 +5,11 @@ namespace StrategyTester
 {
 	class ScottPlotHelper
 	{
-		public static void ShowHeatMap(IDictionary<(decimal x, decimal y), List<decimal>> heatMap, bool labelValues)
+		public static void ShowHeatMap(
+			IDictionary<(decimal x, decimal y), List<decimal>> heatMap, 
+			(string x, string y)                               axisLabels, 
+			string                                             valueLabel, 
+			bool                                               labelValues)
 		{
 			/*
 			heatMap = new Dictionary<(int x, int y), List<decimal>>();
@@ -20,26 +24,23 @@ namespace StrategyTester
 			heatMap[(2, 6)] = new List<decimal>() { 9 };
 			*/
 
-			var maSet =  heatMap.Keys.Select(k => k.x).Distinct().OrderBy(x => x);
-			var emaSet = heatMap.Keys.Select(k => k.y).Distinct().OrderBy(x => x);
+			decimal[] xValues = heatMap.Keys.Select(k => k.x).Distinct().OrderBy(x => x).ToArray();
+			decimal[] yValues = heatMap.Keys.Select(k => k.y).Distinct().OrderBy(y => y).ToArray();
 
-			decimal[] xValues = maSet.ToArray();       // например: [30, 35, 40, ..., 150]
-			decimal[] yValues = emaSet.ToArray(); // например: [6, 7, 8, ..., 22]
-
-			int cols = xValues.Length;       // высота = количество разных maDays
-			int rows = yValues.Length;  // ширина = количество разных процентов
+			int cols = xValues.Length;
+			int rows = yValues.Length;
 
 			double[,] data = new double[rows, cols];
 
 			for (int row = 0; row < rows; row++)
 			{
-				decimal ema = yValues[row];
+				decimal y = yValues[row];
 
 				for (int col = 0; col < cols; col++)
 				{
-					decimal ma = xValues[col];
+					decimal x = xValues[col];
 
-					if (heatMap.TryGetValue((ma, ema), out var list) && list.Count > 0)
+					if (heatMap.TryGetValue((x, y), out var list) && list.Count > 0)
 					{
 						data[yValues.Length - 1 - row, col] = (double) list.Average();
 					}
@@ -53,8 +54,10 @@ namespace StrategyTester
 			var plot = new ScottPlot.Plot();
 
 			var hm = plot.Add.Heatmap(data);
-			hm.Colormap = new ScottPlot.Colormaps.Turbo();
-			hm.Smooth = true;
+			// Viridis: perceptually uniform, brightness increases monotonically from low to high (Turbo is dark at both ends).
+			// No smoothing: each cell is a discrete parameter combination, interpolating between them hides cliffs.
+			hm.Colormap = new ScottPlot.Colormaps.Viridis();
+			hm.Smooth = false;
 
 			if (labelValues)
 			{
@@ -72,8 +75,8 @@ namespace StrategyTester
 
 			// axis titles
 			plot.Title("HeatMap");
-			plot.XLabel("MA Days");
-			plot.YLabel("EMA Days");
+			plot.XLabel(axisLabels.x);
+			plot.YLabel(axisLabels.y);
 
 			// map indices -> your X/Y values using manual ticks
 			double[] xPositions = Enumerable.Range(0, xValues.Length)
@@ -98,7 +101,7 @@ namespace StrategyTester
 			plot.Axes.SetLimits(left: -0.5, right: cols - 0.5, bottom: -0.5, top: rows - 0.5);
 
 			var cb = plot.Add.ColorBar(hm);
-			cb.Label = "Profit ratio";
+			cb.Label = valueLabel;
 			///cb.LabelStyle.FontSize = 24;
 
 			FormsPlotViewer.Launch(plot);

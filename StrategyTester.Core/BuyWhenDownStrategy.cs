@@ -53,6 +53,8 @@
 			return (PctDownFromPeakToBuy, DaysOfNonGoingDownToBuy);
 		}
 
+		public override (string x, string y) HeatmapAxisLabels => ("Down % from peak to buy", "Non-down days before buying");
+
 		protected override void OnRunStarting()
 		{
 			_pricePeak       = 0;
